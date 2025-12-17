@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyseur de Débit Vocal - Parlez Lentement</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --danger: #dc2626;
+            --danger-hover: #b91c1c;
+            --neutral: #4b5563;
+            --neutral-hover: #374151;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #111827;
+            --text-secondary: #6b7280;
+            --success-bg: #d1fae5;
+            --success-text: #065f46;
+            --warning-bg: #fef3c7;
+            --warning-text: #92400e;
+            --error-bg: #fee2e2;
+            --error-text: #991b1b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 48px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--text-main);
+            margin-bottom: 12px;
+            font-size: 2.25rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            font-size: 1.125rem;
+        }
+
+        .status-indicator {
+            text-align: center;
+            margin: 30px 0;
+            padding: 24px;
+            border-radius: 16px;
+            transition: all 0.3s ease;
+            font-size: 1.25rem;
+            font-weight: 600;
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            color: var(--text-secondary);
+        }
+
+        /* Classes pour les états de débit */
+        .status-excellent {
+            background-color: var(--success-bg);
+            color: var(--success-text);
+            border-color: transparent;
+            animation: pulse-soft 2s infinite;
+        }
+
+        .status-attention {
+            background-color: var(--warning-bg);
+            color: var(--warning-text);
+            border-color: transparent;
+        }
+
+        .status-trop-rapide {
+            background-color: var(--error-bg);
+            color: var(--error-text);
+            border-color: transparent;
+            animation: shake 0.5s infinite;
+        }
+
+        @keyframes pulse-soft {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.01); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 24px;
+            margin: 40px 0;
+        }
+
+        .stat-card {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .transcription {
+            background: #f9fafb;
+            padding: 24px;
+            border-radius: 16px;
+            margin: 30px 0;
+            min-height: 120px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 1.125rem;
+            color: var(--text-main);
+            border: 1px solid #e5e7eb;
+            line-height: 1.6;
+        }
+
+        .controls {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin: 40px 0;
+        }
+
+        button {
+            padding: 16px 32px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-start { background-color: var(--primary); color: white; }
+        .btn-start:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+        
+        .btn-stop { background-color: var(--danger); color: white; }
+        .btn-stop:hover { background-color: var(--danger-hover); transform: translateY(-1px); }
+
+        .btn-reset { background-color: white; color: var(--neutral); border: 1px solid #e5e7eb; }
+
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .microphone-icon {
+            font-size: 4rem;
+            text-align: center;
+            margin: 30px auto;
+            background: #eff6ff;
+            width: 120px;
+            height: 120px;
+            line-height: 120px;
+            border-radius: 50%;
+            color: var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .recording {
+            animation: pulse-ring 2s infinite;
+            background-color: #fee2e2;
+            color: var(--danger);
+        }
+
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(220, 38, 38, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+        }
+
+        .guide {
+            background: #f8fafc;
+            padding: 32px;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Analyseur de Débit Vocal</h1>
+        <p class="subtitle">Entraînez-vous à parler lentement et clairement</p>
+
+        <div class="microphone-icon" id="micIcon">🎙️</div>
+
+        <div class="status-indicator" id="statusIndicator">
+            Cliquez sur "Démarrer" pour commencer
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="debitActuel">0.0</div>
+                <div class="stat-label">mots/sec (actuel)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalMots">0</div>
+                <div class="stat-label">mots prononcés</div>
+            </div>
+        </div>
+
+        <div class="transcription" id="transcription">
+            Votre texte apparaîtra ici...
+        </div>
+
+        <div class="controls">
+            <button class="btn-start" id="btnStart">▶ Démarrer</button>
+            <button class="btn-stop" id="btnStop" disabled>⏹ Arrêter</button>
+            <button class="btn-reset" id="btnReset">🔄 Réinitialiser</button>
+        </div>
+
+        <div class="guide">
+            <h3>📋 Guide d'utilisation</h3>
+            <ul style="list-style: none; color: var(--text-secondary); margin-top: 10px;">
+                <li><strong>Excellent ✅</strong> : Moins de 2.5 mots/sec - Débit parfait !</li>
+                <li><strong>Attention ⚠️</strong> : 3.0 - 3.5 mots/sec - Essayez de ralentir</li>
+                <li><strong>Trop rapide 🚨</strong> : Plus de 3.5 mots/sec - Calmez-vous !</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Initialisation de la reconnaissance vocale
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            alert("Désolé, votre navigateur ne supporte pas la reconnaissance vocale (essayez Chrome ou Edge).");
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = "fr-FR";
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        // Configuration des seuils
+        const SEUIL_PARFAIT = 3.0;
+        const SEUIL_OK = 3.5;
+        const WINDOW_SEC = 3 // Fenêtre de calcul pour le débit actuel
+
+        let wordTimeline = [];
+        let finalText = "";
+        let totalWordsCount = 0;
+        let lastValidWps = 0;
+
+        // Éléments du DOM
+        const statusIndicator = document.getElementById("statusIndicator");
+        const debitActuelEl = document.getElementById("debitActuel");
+        const totalMotsEl = document.getElementById("totalMots");
+        const transcriptionEl = document.getElementById("transcription");
+        const micIcon = document.getElementById("micIcon");
+        const btnStart = document.getElementById("btnStart");
+        const btnStop = document.getElementById("btnStop");
+        const btnReset = document.getElementById("btnReset");
+
+        function updateUI(wps) {
+            debitActuelEl.textContent = wps.toFixed(1);
+            
+            // Réinitialisation des classes
+            statusIndicator.className = "status-indicator";
+            
+            if (wps === 0) {
+                statusIndicator.textContent = "Parlez maintenant...";
+            } else if (wps < SEUIL_PARFAIT) {
+                statusIndicator.classList.add("status-excellent");
+                statusIndicator.textContent = "✅ Excellent ! Débit parfait";
+            } else if (wps < SEUIL_OK) {
+                statusIndicator.classList.add("status-attention");
+                statusIndicator.textContent = "⚠️ Attention - Essayez de ralentir";
+            } else {
+                statusIndicator.classList.add("status-trop-rapide");
+                statusIndicator.textContent = "🚨 TROP RAPIDE ! Calmez-vous !";
+            }
+        }
+
+        recognition.onresult = (event) => {
+            let interim = "";
+            let newWordsCount = 0;
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript.trim();
+
+                if (event.results[i].isFinal) {
+                    finalText += transcript + " ";
+                    const words = transcript.split(/\s+/).filter(w => w.length > 0);
+                    newWordsCount = words.length;
+                    totalWordsCount += newWordsCount;
+                    
+                    const now = Date.now();
+                    words.forEach(() => {
+                        wordTimeline.push(now);
+                    });
+                } else {
+                    interim += transcript;
+                }
+            }
+
+            transcriptionEl.textContent = finalText + interim;
+            totalMotsEl.textContent = totalWordsCount;
+
+            // Calcul du débit sur les X dernières secondes
+            const now = Date.now();
+            wordTimeline = wordTimeline.filter(t => now - t <= WINDOW_SEC * 1000);
+
+            let wps;
+            if (wordTimeline.length > 0) {
+                wps = wordTimeline.length / WINDOW_SEC;
+                lastValidWps = wps;
+            } else {
+                // Décroissance douce si on arrête de parler
+                wps = lastValidWps * 0.8;
+                if (wps < 0.1) wps = 0;
+                lastValidWps = wps;
+            }
+
+            updateUI(wps);
+        };
+
+        btnStart.onclick = () => {
+            recognition.start();
+            btnStart.disabled = true;
+            btnStop.disabled = false;
+            micIcon.classList.add("recording");
+        };
+
+        btnStop.onclick = () => {
+            recognition.stop();
+            btnStart.disabled = false;
+            btnStop.disabled = true;
+            micIcon.classList.remove("recording");
+        };
+
+        btnReset.onclick = () => {
+            location.reload(); // Moyen le plus simple de tout remettre à zéro proprement
+        };
+
+        recognition.onerror = (event) => {
+            console.error("Erreur de reconnaissance:", event.error);
+            if(event.error === 'not-allowed') alert("L'accès au micro a été refusé.");
+            btnStop.onclick();
+        };
+    </script>
+</body>
+</html>
